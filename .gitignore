@@ -1,0 +1,7 @@
+# Ignore dataset and model output files/folders
+out/
+Models/
+*.csv
+*.ipynb
+
+PHQ9_IRT_Simple.ipynb
