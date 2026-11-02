@@ -1,6 +1,8 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base,sessionmaker
 
+
+
 from core.config import DATABASE_CONNECTION_ORL
 
 if not DATABASE_CONNECTION_ORL:
