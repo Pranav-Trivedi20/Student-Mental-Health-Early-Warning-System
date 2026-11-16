@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 
@@ -6,17 +7,42 @@ function Register() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // Simulated registration for prototype
-    navigate('/dashboard')
+    setError('')
+    setLoading(true)
+
+    try {
+      const response = await fetch('http://localhost:8000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: fullName,
+          email,
+          password,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Registration failed.')
+      }
+
+      navigate('/login')
+    } catch (err) {
+      setError(err.message || 'Unable to connect to the server.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4 sm:p-6">
       <div className="w-full max-w-md">
-        {/* Header */}
         <div className="mb-8 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-2xl font-bold text-white shadow-md shadow-blue-500/20">
             ♥
@@ -29,7 +55,6 @@ function Register() {
           </p>
         </div>
 
-        {/* Card */}
         <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
           <h2 className="text-xl font-bold text-slate-900">Create your student account</h2>
           <p className="mt-1 text-sm text-slate-500">
@@ -38,52 +63,51 @@ function Register() {
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                Full Name
-              </label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Full Name</label>
               <input
                 type="text"
                 required
+                minLength={2}
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Prayanshu Chourasia"
+                placeholder="Your full name"
                 className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                University Email
-              </label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">University Email</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="prayanshu@juet.ac.in"
+                placeholder="you@juet.ac.in"
                 className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                Password
-              </label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Password</label>
               <input
                 type="password"
                 required
+                minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Create a secure password"
+                placeholder="At least 8 characters"
                 className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
             </div>
 
+            {error && <p className="text-sm text-red-600">{error}</p>}
+
             <button
               type="submit"
-              className="mt-2 w-full rounded-xl bg-blue-600 py-3.5 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-[0.99]"
+              disabled={loading}
+              className="mt-2 w-full rounded-xl bg-blue-600 py-3.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
             >
-              Create Account
+              {loading ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
 
@@ -95,9 +119,8 @@ function Register() {
           </div>
         </div>
 
-        {/* Disclaimer */}
         <p className="mt-6 text-center text-xs text-slate-400">
-          Privacy Notice: Assessment data is processed temporarily to generate risk indicators.
+          Privacy Notice: Assessment data is processed to generate risk indicators.
         </p>
       </div>
     </div>
