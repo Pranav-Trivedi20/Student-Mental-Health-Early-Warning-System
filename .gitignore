@@ -1,10 +1,10 @@
-Dataset_Preparation.ipynb
-/Models
-out
+# Ignore dataset and model output files/folders
+out/
+Models/
+*.csv
+*.ipynb
 
+PHQ9_IRT_Simple.ipynb
 
-PHQ9_Question_Codebook.csv
-PHQ9_Real_24292_Annotated_Questions.csv
-
-synthetic_Dataset_600.csv
-Dataset_Preparation.ipynb
+__pycache__/
+*.pyc
