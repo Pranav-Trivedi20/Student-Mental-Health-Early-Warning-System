@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
+import { fetchCurrentUser, fetchHistory } from '../services/api'
 
 const assessments = [
   {
@@ -40,56 +41,91 @@ const assessments = [
   },
 ]
 
+const assessmentNames = {
+  overall: 'Overall Mental Health',
+  depression: 'Depression',
+  anxiety: 'Anxiety',
+  stress: 'Stress',
+}
+
 function Dashboard() {
   const navigate = useNavigate()
-  const [stats] = useState(() => {
-    const history = JSON.parse(localStorage.getItem('assessmentHistory') || '[]')
-    if (history.length > 0) {
-      return {
-        completedCount: history.length,
-        lastType: history[0].type || history[0].title || 'Assessment',
-        lastScore: `${history[0].score}/10`,
-        lastRisk: history[0].risk || history[0].risk_level || 'Moderate',
+
+  const [user, setUser] = useState(null)
+  const [history, setHistory] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    async function loadDashboard() {
+      try {
+        setLoading(true)
+        setError('')
+
+        const [userData, historyData] = await Promise.all([
+          fetchCurrentUser(),
+          fetchHistory(),
+        ])
+
+        setUser(userData)
+        setHistory(Array.isArray(historyData) ? historyData : [])
+      } catch (err) {
+        setError(err.message || 'Could not load dashboard data.')
+      } finally {
+        setLoading(false)
       }
     }
-    return {
-      completedCount: 3,
-      lastType: 'Depression',
-      lastScore: '6.2/10',
-      lastRisk: 'Moderate',
-    }
-  })
+
+    loadDashboard()
+  }, [])
+
+  const latestAssessment = history[0]
+
+  const latestAssessmentName = latestAssessment
+    ? assessmentNames[latestAssessment.assessment_type] ||
+      latestAssessment.assessment_type
+    : 'No assessments yet'
+
+  const latestScore =
+    latestAssessment?.score !== null &&
+    latestAssessment?.score !== undefined
+      ? `${Number(latestAssessment.score).toFixed(1)}/10`
+      : 'Not available'
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
-      {/* Welcome Banner */}
-      <section className="relative overflow-hidden rounded-3xl bg-slate-900 p-8 sm:p-10 text-white shadow-lg">
+      <section className="relative overflow-hidden rounded-3xl bg-slate-900 p-8 text-white shadow-lg sm:p-10">
         <div className="relative z-10 max-w-2xl">
-          <div className="inline-flex items-center gap-2 rounded-full bg-blue-500/20 px-3.5 py-1 text-xs font-semibold text-blue-300 backdrop-blur-sm border border-blue-400/20">
-            <span>JUET Early Warning Portal</span>
+          <div className="inline-flex items-center rounded-full border border-blue-400/20 bg-blue-500/20 px-3.5 py-1 text-xs font-semibold text-blue-300">
+            JUET Early Warning Portal
           </div>
 
-          <h1 className="mt-4 text-3xl font-bold sm:text-4xl tracking-tight text-white">
-            Good to see you, Prayanshu.
+          <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            Welcome, {user?.name || 'Student'}.
           </h1>
 
           <p className="mt-3 text-base leading-relaxed text-slate-300">
-            Take a moment to check in with your mental wellbeing. Choose one of the four independent assessments below to receive model-driven risk predictions, contributing factors, and personalized guidance.
+            Take a moment to check in with your mental wellbeing. Choose an
+            assessment below to get started.
           </p>
         </div>
 
-        {/* Subtle decorative background accent */}
         <div className="absolute -right-12 -bottom-12 h-64 w-64 rounded-full bg-blue-600/20 blur-3xl" />
       </section>
 
-      {/* Quick Stats Grid */}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       <section className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
             Assessments Completed
           </p>
           <p className="mt-2 text-3xl font-bold text-slate-900">
-            {stats.completedCount}
+            {loading ? '...' : history.length}
           </p>
         </div>
 
@@ -97,8 +133,8 @@ function Dashboard() {
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
             Latest Assessment
           </p>
-          <p className="mt-2 text-xl font-bold text-slate-900 truncate">
-            {stats.lastType}
+          <p className="mt-2 truncate text-xl font-bold text-slate-900">
+            {loading ? 'Loading...' : latestAssessmentName}
           </p>
         </div>
 
@@ -106,25 +142,19 @@ function Dashboard() {
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
             Latest Prediction Score
           </p>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-blue-600">
-              {stats.lastScore}
-            </span>
-            <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md">
-              {stats.lastRisk} Risk
-            </span>
-          </div>
+          <p className="mt-2 text-3xl font-bold text-blue-600">
+            {loading ? '...' : latestScore}
+          </p>
         </div>
       </section>
 
-      {/* Four Assessment Cards */}
       <section>
         <div className="mb-6">
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-            Independent Assessment Systems
+            Assessment Systems
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Each assessment operates independently with its own questionnaire structure and prediction pipeline.
+            Select an assessment to check your mental wellbeing.
           </p>
         </div>
 
@@ -136,18 +166,22 @@ function Dashboard() {
             >
               <div>
                 <div className="flex items-center justify-between">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-2xl text-2xl border ${item.color}`}>
+                  <div
+                    className={`flex h-12 w-12 items-center justify-center rounded-2xl border text-2xl ${item.color}`}
+                  >
                     {item.icon}
                   </div>
+
                   <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
-                    Independent System
+                    Assessment
                   </span>
                 </div>
 
                 <h3 className="mt-5 text-xl font-bold text-slate-900">
                   {item.title}
                 </h3>
-                <p className="text-xs font-medium text-blue-600 mt-0.5">
+
+                <p className="mt-0.5 text-xs font-medium text-blue-600">
                   {item.subtitle}
                 </p>
 
@@ -156,10 +190,10 @@ function Dashboard() {
                 </p>
               </div>
 
-              <div className="mt-8 pt-4 border-t border-slate-100">
+              <div className="mt-8 border-t border-slate-100 pt-4">
                 <button
                   onClick={() => navigate(`/assessment/${item.type}`)}
-                  className="flex w-full items-center justify-between rounded-xl bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-blue-600 active:scale-[0.99]"
+                  className="flex w-full items-center justify-between rounded-xl bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-blue-600"
                 >
                   <span>Start Assessment</span>
                   <span>→</span>
@@ -170,18 +204,20 @@ function Dashboard() {
         </div>
       </section>
 
-      {/* Privacy Notice */}
       <section className="rounded-2xl border border-blue-100 bg-blue-50/60 p-5">
         <div className="flex items-start gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700 text-lg">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-lg text-blue-700">
             🛡️
           </div>
+
           <div>
-            <h3 className="font-bold text-blue-900 text-sm">
-              Student Privacy Protection Policy
+            <h3 className="text-sm font-bold text-blue-900">
+              Student Privacy Protection
             </h3>
             <p className="mt-1 text-xs leading-relaxed text-blue-800">
-              Raw questionnaire answers are processed in-memory to compute risk indicators and XAI factors. Only final prediction metadata and recommendations are retained in history. This system does not provide a medical diagnosis.
+              Your assessment history is associated with your account.
+              This system provides early-warning information and does not
+              provide a medical diagnosis.
             </p>
           </div>
         </div>
