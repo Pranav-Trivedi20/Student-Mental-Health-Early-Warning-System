@@ -1,289 +1,254 @@
 import { useEffect, useState } from 'react'
 import { fetchHistory } from '../services/api'
 
-const defaultSampleHistory = [
-  {
-    type: 'Depression Risk Assessment',
-    assessment_type: 'depression',
-    score: 6.8,
-    risk: 'Moderate',
-    date: '22/09/2026',
-    contributing_factors: [
-      { feature: 'Loss of interest & motivation', importance: 0.38 },
-      { feature: 'Sleep disruption & low energy', importance: 0.27 },
-      { feature: 'Academic concentration difficulty', importance: 0.21 },
-    ],
-    recommendations: [
-      'Maintain regular daily routines and sleep patterns.',
-      'Stay connected with people you trust.',
-      'Consider speaking with a qualified professional if difficulties persist.',
-    ],
-  },
-  {
-    type: 'Anxiety Risk Assessment',
-    assessment_type: 'anxiety',
-    score: 4.2,
-    risk: 'Moderate',
-    date: '18/09/2026',
-    contributing_factors: [
-      { feature: 'Persistent worrying & nervous energy', importance: 0.40 },
-      { feature: 'Inability to relax under pressure', importance: 0.26 },
-    ],
-    recommendations: [
-      'Try structured breathing or relaxation exercises.',
-      'Break stressful tasks into smaller steps.',
-    ],
-  },
-  {
-    type: 'Stress Assessment',
-    assessment_type: 'stress',
-    score: 7.1,
-    risk: 'High',
-    date: '12/09/2026',
-    contributing_factors: [
-      { feature: 'Perceived lack of control', importance: 0.36 },
-      { feature: 'Overwhelming task accumulation', importance: 0.29 },
-    ],
-    recommendations: [
-      'Prioritize important tasks and avoid unnecessary multitasking.',
-      'Schedule regular breaks between study sessions.',
-    ],
-  },
-]
+const assessmentNames = {
+  overall: 'Overall Mental Health',
+  depression: 'Depression Assessment',
+  anxiety: 'Anxiety Assessment',
+  stress: 'Stress Assessment',
+}
+
+function formatDate(timestamp) {
+  if (!timestamp) return 'Date unavailable'
+
+  const date = new Date(timestamp)
+
+  if (Number.isNaN(date.getTime())) return 'Date unavailable'
+
+  return date.toLocaleString('en-IN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+}
 
 function History() {
   const [historyList, setHistoryList] = useState([])
   const [selectedResult, setSelectedResult] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    async function loadData() {
-      const data = await fetchHistory()
-      if (data && data.length > 0) {
-        setHistoryList(data)
-      } else {
-        setHistoryList(defaultSampleHistory)
+    async function loadHistory() {
+      try {
+        setLoading(true)
+        setError('')
+
+        const data = await fetchHistory()
+        setHistoryList(Array.isArray(data) ? data : [])
+      } catch (err) {
+        setError(err.message || 'Could not load assessment history.')
+      } finally {
+        setLoading(false)
       }
     }
-    loadData()
+
+    loadHistory()
   }, [])
 
-  const getRiskBadgeStyle = (risk) => {
-    if (risk === 'High') return 'bg-red-50 text-red-700 border-red-200'
-    if (risk === 'Moderate') return 'bg-amber-50 text-amber-700 border-amber-200'
-    return 'bg-emerald-50 text-emerald-700 border-emerald-200'
-  }
-
-  const handleClearHistory = () => {
-    if (window.confirm('Are you sure you want to clear your saved local assessment history?')) {
-      localStorage.removeItem('assessmentHistory')
-      setHistoryList([])
-    }
-  }
+  const getTitle = (item) =>
+    assessmentNames[item.assessment_type] ||
+    item.assessment_type ||
+    'Assessment'
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
-      {/* Page Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-            Assessment History & Progress
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Track your previous risk predictions, model factors, and score trends over time.
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+          Assessment History
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          View your previously completed assessments and their results.
+        </p>
+      </div>
+
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <section className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            Total Assessments
+          </p>
+          <p className="mt-2 text-3xl font-bold text-slate-900">
+            {loading ? '...' : historyList.length}
           </p>
         </div>
 
-        {historyList.length > 0 && (
-          <button
-            onClick={handleClearHistory}
-            className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-red-50 hover:text-red-600 transition"
-          >
-            Clear Local History
-          </button>
-        )}
-      </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            Latest Assessment
+          </p>
+          <p className="mt-2 text-xl font-bold text-slate-900">
+            {loading
+              ? 'Loading...'
+              : historyList.length > 0
+                ? getTitle(historyList[0])
+                : 'No assessments yet'}
+          </p>
+        </div>
+      </section>
 
-      {/* Progress Chart / Trend Visualizer */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs">
-        <div className="flex items-center justify-between mb-4">
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xs">
+        <div className="flex items-center justify-between border-b border-slate-100 p-6">
           <div>
             <h2 className="text-lg font-bold text-slate-900">
-              Risk Score Trend over Time
+              Saved Assessment Records
             </h2>
-            <p className="text-xs text-slate-400">
-              Visual history of your risk scores (Scale 1 - 10)
+            <p className="mt-1 text-xs text-slate-500">
+              Records retrieved from your account.
             </p>
           </div>
-          <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-            {historyList.length} Assessments Logged
+
+          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
+            {historyList.length} Records
           </span>
         </div>
 
-        {/* Visual Bar chart */}
-        <div className="mt-6 h-44 rounded-2xl bg-slate-50 p-6 border border-slate-100 flex items-end gap-3 sm:gap-6 overflow-x-auto">
-          {historyList.map((item, idx) => {
-            const scoreVal = typeof item.score === 'number' ? item.score : parseFloat(item.score) || 5
-            const heightPercent = Math.min(100, Math.max(15, (scoreVal / 10) * 100))
-            const risk = item.risk || item.risk_level || 'Moderate'
+        {loading ? (
+          <div className="p-10 text-center text-sm text-slate-500">
+            Loading your assessment history...
+          </div>
+        ) : historyList.length === 0 ? (
+          <div className="p-12 text-center">
+            <div className="text-4xl">📋</div>
+            <h3 className="mt-4 font-bold text-slate-900">
+              No assessments completed yet
+            </h3>
+            <p className="mt-2 text-sm text-slate-500">
+              Your completed assessments will appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[650px] text-left">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  <th className="px-6 py-4">Assessment</th>
+                  <th className="px-6 py-4">Date</th>
+                  <th className="px-6 py-4">Score</th>
+                  <th className="px-6 py-4">Model Version</th>
+                  <th className="px-6 py-4 text-right">Action</th>
+                </tr>
+              </thead>
 
-            let barColor = 'bg-emerald-500'
-            if (risk === 'High') barColor = 'bg-red-500'
-            else if (risk === 'Moderate') barColor = 'bg-amber-500'
-
-            return (
-              <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end min-w-[50px]">
-                <span className="text-xs font-bold text-slate-700">{scoreVal}</span>
-                <div
-                  className={`w-full max-w-[36px] rounded-t-xl transition-all duration-500 ${barColor}`}
-                  style={{ height: `${heightPercent}%` }}
-                />
-                <span className="text-[10px] font-medium text-slate-400 truncate max-w-[60px]">
-                  {item.date || `Entry ${idx + 1}`}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* History Table */}
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xs">
-        <div className="border-b border-slate-100 p-6 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-900">Saved Assessment Records</h2>
-          <span className="text-xs text-slate-400">Privacy: Stored locally</span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[600px] text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-bold uppercase tracking-wider text-slate-400">
-                <th className="px-6 py-4">Assessment System</th>
-                <th className="px-6 py-4">Date</th>
-                <th className="px-6 py-4">Score</th>
-                <th className="px-6 py-4">Risk Indicator</th>
-                <th className="px-6 py-4 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
-              {historyList.map((item, index) => {
-                const title = item.type || item.title || `${item.assessment_type || 'Overall'} Assessment`
-                const risk = item.risk || item.risk_level || 'Moderate'
-                const score = item.score ?? 5.0
-                const dateStr = item.date || new Date().toLocaleDateString('en-IN')
-
-                return (
-                  <tr key={index} className="hover:bg-slate-50/50 transition">
+              <tbody className="divide-y divide-slate-100 text-sm">
+                {historyList.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="transition hover:bg-slate-50"
+                  >
                     <td className="px-6 py-4 font-semibold text-slate-900">
-                      {title}
+                      {getTitle(item)}
                     </td>
-                    <td className="px-6 py-4 text-slate-500 font-mono text-xs">
-                      {dateStr}
+
+                    <td className="px-6 py-4 text-xs text-slate-500">
+                      {formatDate(item.timestamp)}
                     </td>
+
                     <td className="px-6 py-4 font-bold text-slate-900">
-                      {score} / 10
+                      {item.score !== null && item.score !== undefined
+                        ? `${Number(item.score).toFixed(2)} / 10`
+                        : 'Unavailable'}
                     </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-block rounded-full border px-3 py-1 text-xs font-bold ${getRiskBadgeStyle(
-                          risk,
-                        )}`}
-                      >
-                        {risk} Risk
-                      </span>
+
+                    <td className="px-6 py-4 text-xs text-slate-500">
+                      {item.model_version || 'Not available'}
                     </td>
+
                     <td className="px-6 py-4 text-right">
                       <button
                         onClick={() => setSelectedResult(item)}
-                        className="rounded-lg bg-blue-50 px-3.5 py-1.5 text-xs font-bold text-blue-600 hover:bg-blue-100 transition"
+                        className="rounded-lg bg-blue-50 px-3.5 py-1.5 text-xs font-bold text-blue-600 transition hover:bg-blue-100"
                       >
                         View Details
                       </button>
                     </td>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
-      {/* Detail Modal */}
       {selectedResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
-          <div className="w-full max-w-2xl rounded-3xl bg-white p-6 sm:p-8 shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
-                  Detailed Record
-                </span>
-                <h3 className="text-xl font-bold text-slate-900">
-                  {selectedResult.type || selectedResult.title || 'Assessment Result'}
+                <p className="text-xs font-bold uppercase tracking-wider text-blue-600">
+                  Assessment Record
+                </p>
+                <h3 className="mt-1 text-xl font-bold text-slate-900">
+                  {getTitle(selectedResult)}
                 </h3>
               </div>
+
               <button
                 onClick={() => setSelectedResult(null)}
                 className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
+                aria-label="Close details"
               >
                 ✕
               </button>
             </div>
 
-            <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-4 border border-slate-100">
-              <div>
-                <p className="text-xs text-slate-400 font-semibold uppercase">Prediction Score</p>
-                <p className="text-3xl font-extrabold text-blue-600">{selectedResult.score}/10</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-400 font-semibold uppercase">Risk Level</p>
-                <span className={`inline-block rounded-full border px-3 py-1 text-xs font-bold mt-1 ${getRiskBadgeStyle(selectedResult.risk || selectedResult.risk_level)}`}>
-                  {selectedResult.risk || selectedResult.risk_level} Risk
-                </span>
-              </div>
-              <div>
-                <p className="text-xs text-slate-400 font-semibold uppercase">Date</p>
-                <p className="text-xs font-bold text-slate-700 mt-1">{selectedResult.date}</p>
-              </div>
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+              <p className="text-xs font-semibold uppercase text-slate-400">
+                Prediction Score
+              </p>
+              <p className="mt-2 text-4xl font-bold text-blue-600">
+                {selectedResult.score !== null &&
+                selectedResult.score !== undefined
+                  ? `${Number(selectedResult.score).toFixed(2)} / 10`
+                  : 'Unavailable'}
+              </p>
             </div>
 
-            {selectedResult.contributing_factors && (
+            <div className="space-y-4 text-sm">
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-purple-600 mb-2">
-                  Contributing Factors (XAI)
-                </h4>
-                <div className="space-y-2">
-                  {selectedResult.contributing_factors.map((f, i) => (
-                    <div key={i} className="flex justify-between text-xs font-medium text-slate-700 bg-purple-50/50 p-2.5 rounded-xl border border-purple-100">
-                      <span>{f.feature}</span>
-                      <span className="font-mono text-purple-600">
-                        {Math.round((f.importance || 0.2) * 100)}%
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                <p className="text-xs font-semibold uppercase text-slate-400">
+                  Date
+                </p>
+                <p className="mt-1 font-medium text-slate-800">
+                  {formatDate(selectedResult.timestamp)}
+                </p>
               </div>
-            )}
 
-            {selectedResult.recommendations && (
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 mb-2">
-                  Recommendations
-                </h4>
-                <div className="space-y-2">
-                  {selectedResult.recommendations.map((r, i) => (
-                    <div key={i} className="text-xs text-blue-900 bg-blue-50/60 p-2.5 rounded-xl border border-blue-100">
-                      • {r}
-                    </div>
-                  ))}
-                </div>
+                <p className="text-xs font-semibold uppercase text-slate-400">
+                  Model Version
+                </p>
+                <p className="mt-1 font-medium text-slate-800">
+                  {selectedResult.model_version || 'Not available'}
+                </p>
               </div>
-            )}
 
-            <div className="pt-4 border-t border-slate-100 flex justify-end">
+              <div>
+                <p className="text-xs font-semibold uppercase text-slate-400">
+                  Risk Level
+                </p>
+                <p className="mt-1 font-medium text-slate-800">
+                  {selectedResult.risk_level || 'Not assigned by this model'}
+                </p>
+              </div>
+
+              <p className="text-xs leading-relaxed text-slate-500">
+                This record displays the information saved by the assessment
+                system. No additional contributing factors or recommendations
+                are inferred.
+              </p>
+            </div>
+
+            <div className="flex justify-end border-t border-slate-100 pt-4">
               <button
                 onClick={() => setSelectedResult(null)}
-                className="rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-semibold text-white hover:bg-slate-800"
+                className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700"
               >
-                Close Record
+                Close
               </button>
             </div>
           </div>
