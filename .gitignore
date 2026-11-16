@@ -8,3 +8,6 @@ PHQ9_Real_24292_Annotated_Questions.csv
 
 synthetic_Dataset_600.csv
 Dataset_Preparation.ipynb
+
+__pycache__/
+*.pyc
