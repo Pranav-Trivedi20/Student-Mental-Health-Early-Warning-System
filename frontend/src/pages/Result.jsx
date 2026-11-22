@@ -14,9 +14,11 @@ function Result() {
         <h1 className="text-xl font-bold text-slate-900">
           No assessment result found
         </h1>
+
         <p className="mt-2 text-sm text-slate-600">
           Please complete the assessment to view your result.
         </p>
+
         <button
           onClick={() => navigate('/assessment/overall')}
           className="mt-5 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
@@ -28,12 +30,29 @@ function Result() {
   }
 
   const score = Number(result.score)
+
   const formattedDate = result.timestamp
     ? new Date(result.timestamp).toLocaleString('en-IN')
     : 'Just now'
 
+  // Read the category and interpretation returned by the backend.
+  const riskLevel = result.risk_level
+  const interpretation = result.interpretation
+
+  const categoryStyles = {
+    Good: 'border-green-200 bg-green-50 text-green-800',
+    Fair: 'border-yellow-200 bg-yellow-50 text-yellow-800',
+    'Moderate concern': 'border-orange-200 bg-orange-50 text-orange-800',
+    'High concern': 'border-red-200 bg-red-50 text-red-800'
+  }
+
+  const categoryStyle =
+    categoryStyles[riskLevel] ||
+    'border-slate-200 bg-slate-50 text-slate-700'
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
+
       <button
         onClick={() => navigate('/dashboard')}
         className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-900"
@@ -41,6 +60,7 @@ function Result() {
         ← Return to Dashboard
       </button>
 
+      {/* PAGE HEADING */}
       <div>
         <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
           Assessment Result
@@ -55,8 +75,12 @@ function Result() {
         </p>
       </div>
 
+      {/* MAIN RESULT CARD */}
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs sm:p-8">
+
         <div className="grid gap-6 sm:grid-cols-3 sm:items-center">
+
+          {/* SCORE */}
           <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-100 bg-slate-50 p-6 text-center">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Model Score
@@ -66,14 +90,31 @@ function Result() {
               <span className="text-5xl font-extrabold text-blue-600">
                 {Number.isFinite(score) ? score.toFixed(2) : 'N/A'}
               </span>
-              <span className="text-lg font-bold text-slate-400">/ 10</span>
+
+              <span className="text-lg font-bold text-slate-400">
+                / 10
+              </span>
             </div>
           </div>
 
+          {/* RESULT INFORMATION */}
           <div className="space-y-3 sm:col-span-2">
+
             <h2 className="text-xl font-bold text-slate-900">
               Your assessment has been completed.
             </h2>
+
+            {riskLevel && (
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Assessment Category
+                </span>
+
+                <div className={`mt-2 inline-flex rounded-xl border px-4 py-2 text-sm font-bold ${categoryStyle}`}>
+                  {riskLevel}
+                </div>
+              </div>
+            )}
 
             <p className="text-sm leading-relaxed text-slate-600">
               This score is the output of the machine learning model based on
@@ -91,19 +132,37 @@ function Result() {
         </div>
       </div>
 
+      {/* TABLE 3.4 INTERPRETATION */}
+      {interpretation && (
+        <div className={`rounded-2xl border p-6 ${categoryStyle}`}>
+          <h2 className="font-bold">
+            What does your category mean?
+          </h2>
+
+          <p className="mt-2 text-sm leading-relaxed">
+            {interpretation}
+          </p>
+        </div>
+      )}
+
+      {/* GENERAL EXPLANATION */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6">
         <h2 className="font-bold text-slate-900">
-          What does this result mean?
+          Understanding your result
         </h2>
 
         <p className="mt-2 text-sm leading-relaxed text-slate-600">
           The model produces a numerical score from the assessment inputs.
-          This score should not be treated as a clinical diagnosis or as a
+          The category and interpretation are based on the result bands
+          specified in Table 3.4 of the project report.
+          This score should not be treated as a clinical diagnosis or
           substitute for professional evaluation.
         </p>
       </div>
 
+      {/* ACTION BUTTONS */}
       <div className="flex flex-wrap gap-4">
+
         <button
           onClick={() => navigate('/history')}
           className="rounded-xl bg-blue-600 px-6 py-3.5 text-sm font-semibold text-white hover:bg-blue-700"
@@ -117,8 +176,10 @@ function Result() {
         >
           Return to Dashboard
         </button>
+
       </div>
 
+      {/* IMPORTANT NOTICE */}
       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
         <h3 className="text-xs font-bold uppercase tracking-wider text-amber-900">
           Important Notice
@@ -131,6 +192,7 @@ function Result() {
           campus counselor.
         </p>
       </div>
+
     </div>
   )
 }
