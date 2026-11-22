@@ -3,15 +3,15 @@ import os
 from pathlib import Path
 from typing import Literal
 
-import numpy as np
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import text
+import numpy as np #type:ignore
+from fastapi import FastAPI, Depends, HTTPException #type:ignore
+from fastapi.middleware.cors import CORSMiddleware #type:ignore
+from pydantic import BaseModel, Field #type:ignore
+from sqlalchemy.orm import Session #type:ignore
+from sqlalchemy.exc import SQLAlchemyError #type:ignore
+from sqlalchemy import text #type:ignore
 
-from pytorch_tabnet.tab_model import TabNetRegressor
+from pytorch_tabnet.tab_model import TabNetRegressor #type:ignore
 
 from core.dependencies import get_current_user
 from db.database import database_engine, get_database_session

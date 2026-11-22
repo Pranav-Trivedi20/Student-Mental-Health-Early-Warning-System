@@ -1,7 +1,7 @@
 
 from datetime import datetime, timezone
 
-from sqlalchemy import (
+from sqlalchemy import ( #type:ignore
     Column,
     DateTime,
     Float,
