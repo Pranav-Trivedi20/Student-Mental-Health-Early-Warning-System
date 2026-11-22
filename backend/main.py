@@ -3,21 +3,61 @@ import os
 from pathlib import Path
 from typing import Literal
 
-import numpy as np
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import text
+import numpy as np #type:ignore
+from fastapi import FastAPI, Depends, HTTPException #type:ignore
+from fastapi.middleware.cors import CORSMiddleware #type:ignore
+from pydantic import BaseModel, Field #type:ignore
+from sqlalchemy.orm import Session #type:ignore
+from sqlalchemy.exc import SQLAlchemyError #type:ignore
+from sqlalchemy import text #type:ignore
 
-from pytorch_tabnet.tab_model import TabNetRegressor
+from pytorch_tabnet.tab_model import TabNetRegressor #type:ignore
 
 from core.dependencies import get_current_user
 from db.database import database_engine, get_database_session
 from routers.authentication import authentication_router
 from models.assessment_result import AssessmentResult
 
+# Classfications of the models using if else , based on the predciotns 
+
+def classify_overall_score(score: float):
+    """
+    Classifies the overall mental health score.
+
+    Higher score = greater mental health concern.
+    Lower score = better mental health.
+    """
+
+    score = float(score)
+
+    if not 0 <= score <= 10:
+        raise ValueError(
+            f"Overall mental health score must be between 0 and 10. Received: {score}"
+        )
+
+    if score >= 8:
+        return (
+            "High concern",
+            "Strong early warning; professional support is advised"
+        )
+
+    elif score >= 6:
+        return (
+            "Moderate concern",
+            "Early warning; repeat the assessment soon and consider talking to someone"
+        )
+
+    elif score >= 4:
+        return (
+            "Fair",
+            "Mild difficulties; monitor and consider lifestyle changes"
+        )
+
+    else:
+        return (
+            "Good",
+            "No immediate concern; continue healthy habits and periodic self-check"
+        )
 
 
 # APPLICATION CONFIGURATION
@@ -530,40 +570,45 @@ def predict_overall_mental_health(
     """
     Authenticated Overall Mental Health prediction.
 
-    The prediction is generated using the existing
-    TabNet regression model and saved for the logged-in student.
+    Uses the existing trained TabNet model,
+    classifies the predicted score using Table 3.4,
+    and saves the result for the logged-in student.
     """
 
     model = get_overall_model()
-
     model_input = prepare_model_input(request.responses)
 
     try:
+        # Generate prediction using the existing trained TabNet model
         prediction = model.predict(model_input)
 
-        score = float(prediction[0][0])
+        score = float(np.asarray(prediction).reshape(-1)[0])
 
-        if not np.isfinite(score):
-            raise ValueError("Model returned an invalid score")
+        # Assign category using Table 3.4
+        risk_level, interpretation = classify_overall_score(score)
 
+        # Create assessment result
         result = AssessmentResult(
             user_id=current_student.id,
             assessment_type="overall",
             score=score,
-            risk_level=None,
+            risk_level=risk_level,
             model_version=MODEL_VERSION
         )
 
+        # Save result in the database
         database.add(result)
         database.commit()
         database.refresh(result)
 
+        # Return actual assessment result
         return {
             "id": result.id,
-            "assessment_type": result.assessment_type,
+            "assessment_type": "overall",
             "title": "Overall Mental Health Assessment",
-            "score": result.score,
-            "risk_level": result.risk_level,
+            "score": round(score, 2),
+            "risk_level": risk_level,
+            "interpretation": interpretation,
             "model_version": result.model_version,
             "timestamp": result.created_at
         }
@@ -582,8 +627,7 @@ def predict_overall_mental_health(
             detail="Could not generate the assessment result."
         )
 
-
-
+    
 # AUTHENTICATED ASSESSMENT HISTORY
 
 
