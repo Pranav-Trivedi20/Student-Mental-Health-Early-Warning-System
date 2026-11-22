@@ -43,7 +43,7 @@ class AssessmentResult(DatabaseModelBase):
     # It predicts a score, not a risk category.
     risk_level = Column(
         String(30),
-        nullable=True
+        nullable=False
     )
 
     model_version = Column(
